@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>WS Audio Streaming</title>
+</head>
+
+<body>
+    <header>
+        <h1>Websocket audio stream</h1>
+    </header>
+    <h2>Page under contrsuction</h2>
+    <button onclick="PlaySound()">Play</button>
+    <button onclick="StopSound()">Stop</button>
+
+</body>
+<script type="text/javascript">
+    const buffDuration = 0.5; //buffDuration of the Audio file in ms
+    const dataRate = 8000; //Audio at 8KHz
+    // const bytePerSample = 4;
+    // Create the audio buffer 
+    // let raw_buffer = new ArrayBuffer(buffDuration * dataRate * bytePerSample); 
+    // let buffer_view = new Float32Array(raw_buffer); 
+    // alert(buffer_view.length); // number of samples
+
+    let buffer1 = new Float32Array(buffDuration * dataRate);
+    let buffer2 = new Float32Array(buffDuration * dataRate);
+    //alert(buffer1.length); // number of samples
+
+    //Generate 1KHz wave
+    let time = new Float64Array(buffDuration * dataRate);
+    for (i = 1; i < time.length; i++) {
+        time[i] = time[i - 1] + 1.0 / dataRate;
+        buffer1[i] = Math.sin(time[i]*2*Math.PI*500) ;
+        buffer2[i] = Math.sin(time[i]*2*Math.PI*200) ;
+    }
+
+    // for (i = 0; i < 10; i++) {
+    //     console.log(buffer1[i]);     
+    // }
+
+    //create the audio context where all audio nodes are attached
+    const audioContext = new AudioContext();
+    // const aBuff1 = audioContext.createBuffer(1,buffer1.length,dataRate);
+    // const aBuff2 = audioContext.createBuffer(1,buffer2.length,dataRate);
+    // aBuff1.copyToChannel(buffer1,0); 
+    // aBuff2.getChannelData(0).set(buffer2); 
+
+    //let audioSource = null;
+    //let aBuff = null;
+    let biquadFilter = audioContext.createBiquadFilter();
+    biquadFilter.type = "lowpass";
+    biquadFilter.frequency.value = 1000;
+    biquadFilter.connect(audioContext.destination);
+    
+    // let audioDoubleBuff = [aBuff1, aBuff2];
+    let doubleBuff = [buffer1, buffer2];
+    let buff_id = 0;
+    let interCall_id = null;
+    let nextStartTime = 0.0;
+
+    const max_jitter = 0.8;
+    function PlayBuffer() {
+        let randDelay = Math.round(Math.random() * max_jitter * 1000);
+        console.log(randDelay);
+        setTimeout(()=>{
+            let aBuff = audioContext.createBuffer(1,doubleBuff[buff_id].length,dataRate);
+            aBuff.copyToChannel(doubleBuff[buff_id],0); 
+
+            let audioSource = audioContext.createBufferSource();
+            audioSource.buffer = aBuff;
+            //audioSource.buffer = audioDoubleBuff[buff_id];
+            
+            audioSource.connect(biquadFilter);
+            audioSource.start(nextStartTime);
+             
+            nextStartTime += aBuff.duration;
+            if(buff_id === 0) {
+                buff_id = 1;
+            } else {
+                buff_id = 0;
+            }
+        }, randDelay);
+    }
+
+    function PlaySound() {
+
+        nextStartTime = audioContext.currentTime + 0.8*max_jitter; //set the max_jitter multiplier to get an appropriate margin
+        buff_id = 0;
+        PlayBuffer();
+        interCall_id = setInterval(PlayBuffer,buffDuration*1000);
+
+        // audioSource = audioContext.createBufferSource();
+        // audioSource.loop = false;
+        // //audioSource.detune.value =100;
+        // // connect the AudioBufferSourceNode to the
+        // // destination so we can hear the sound
+        // audioSource.connect(biquadFilter);
+        // // set the buffer in the AudioBufferSourceNode
+        // audioSource.buffer = audioDoubleBuff[0];
+        // // start the source playing
+        // audioSource.start(nextStartTime);
+        // nextStartTime += audioDoubleBuff[0].buffDuration;
+
+        // audioSource2 = audioContext.createBufferSource();
+        // audioSource2.connect(biquadFilter);
+        // audioSource2.buffer = audioDoubleBuff[1];
+        // // start the source playing
+        // audioSource2.start(nextStartTime);   
+    }
+
+    function StopSound() {
+        // if(audioSource) {
+        //     // start the source playing
+        //     audioSource.stop();
+        // }
+        clearInterval(interCall_id);
+        interCall_id = null;
+        
+    }
+
+    // // AudioBuffer:
+    // b = audioContext.createBuffer(1, buffer.length, audioContext.sampleRate); 
+    // b.copyToChannel(f32, 0, 0). 
+    // // Use it in a source: 
+    // s = audioContext.createBufferSource(); 
+    // s.buffer = b;
+
+</script>
+
+</html>

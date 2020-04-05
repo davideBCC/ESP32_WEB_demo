@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>WiFi Configuration</title>
+</head>
+<body>
+    <header>
+        <h1>WiFi Configuration</h1>        
+    </header>
+    <form action="/api/wifi_config" method="POST">
+        <label for="fSSID">SSID:</label><br>
+        <input type="text" id="fSSID" name="fSSID" value=""><br>
+        <label for="fPassword">Password:</label><br>
+        <input type="password" id="fPassword" name="fPassword" value=""><br>
+        <label for="fmDNSname">mDNS host name:</label><br>
+        <input type="text" id="fmDNSname" name="fmDNSname" value=""><br><br>
+        <input type="submit" value="Submit">
+    </form> 
+    
+</body>
+<script>
+    window.addEventListener('load', function () {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                const currentConfig = JSON.parse(this.responseText);
+                document.getElementById("fSSID").value = currentConfig["ssid"];
+                document.getElementById("fPassword").value = currentConfig["password"];
+                document.getElementById("fmDNSname").value = currentConfig["mdns_name"];
+            }
+        };
+        xhttp.open("GET", "SysConfig.json", true);
+        xhttp.send();
+    })
+</script>
+</html>

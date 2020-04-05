@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>ESP32 test page</title>
+</head>
+<body>
+    <header>
+        <h1>ESP32 test page</h1>        
+    </header>
+    
+    <h2>Test of css + html + javascript</h2> 
+    <a href="rock_paper_scissors.htm">Rock Paper Scissors game</a>
+    <h2>Test of WiFi Configuration</h2> 
+    <a href="WiFi_config.html">Wifi Configuration</a>
+    <h2>Test of graph.js</h2> 
+    <a href="graph/index.html">Graph demo</a>
+    <h2>Test sensor data update via Ajax</h2> 
+    <div>
+        <input type="button" id="idAjaxButton" value="Start polling" onclick="onAjaxButton()">
+        <p class="led" id="idAjaxStatus"></p>
+        <p>Sensor output: <span id="sensorValue">N.A.</span></p>
+    </div>
+    <h2>Test of WebSocket</h2> 
+    <div>
+        <p>
+            Connection status: <span class="led" id="idWSStatus"></span>
+        </p> 
+        <p>
+            Stay alive counter: <span id="idWSStayAlive">N.A.</span>
+        </p>
+        <input type="text" id="idWSString" value="Hello World!">
+        <input type="button" id="idWSButton" value="Send String" onclick="onWSButton()">
+        <p>Return string:</p>  
+        <div></div>
+        <pre style="background-color:silver;color:black" id="idReturnString">N.A.</pre>      
+    </div>
+    <h2>Test of Web Audio API</h2> 
+    <a href="audio_stream.html">Web Audio API</a>
+    <h2>Test of form block</h2>        
+    <form action="/button_press" method="POST">
+        <label for="fname">First name:</label><br>
+        <input type="text" id="fname" name="fname" value="Grappa"><br>
+        <label for="lname">Last name:</label><br>
+        <input type="text" id="lname" name="lname" value="Nonino"><br><br>
+        <input type="submit" value="Submit">
+    </form> 
+
+</body>
+<script>
+    
+    let isAjaxPoolActive = false;
+    const ajaxButton = document.getElementById("idAjaxButton");
+    const ajaxLED = document.getElementById("idAjaxStatus");
+    const wsButton = document.getElementById("idWSButton");
+    const wsInputString = document.getElementById("idWSString");
+    const wsLED = document.getElementById("idWSStatus");
+    const wsStayAlive = document.getElementById("idWSStayAlive");
+    const wsReturnString = document.getElementById("idReturnString");
+    const xhttp = new XMLHttpRequest();
+    const refreshDelayMs = 2500;
+    xhttp.timeout = 5000;
+    let ws_url = "";
+    let websocket = Object;
+
+    function onAjaxButton(){
+        if(isAjaxPoolActive === true) {//Deactivate Ajax polling
+            ajaxButton.value="Start polling";
+            ajaxLED.style.backgroundColor = "lightgray";
+            isAjaxPoolActive = false;
+            xhttp.abort();
+        }
+        else {//Activate Ajax polling
+            ajaxButton.value="Stop polling";
+            ajaxLED.style.backgroundColor = "Tomato";
+            isAjaxPoolActive = true;
+            AjaxCall();
+        }
+    }
+    
+    // 4. This will be called after the response is received
+    xhttp.onload = function() {
+        if(this.status == 200 && isAjaxPoolActive) {
+            document.getElementById("sensorValue").innerHTML =
+            this.responseText;
+            setTimeout(AjaxCall,refreshDelayMs);
+        }
+        // if(isAjaxPoolActive) {
+        //     setTimeout(AjaxCall,refreshDelayMs);
+        // }
+    };
+
+    xhttp.onerror = function() {
+        console.log("Ajax request failed");
+        ajaxButton.value="Start polling";
+        ajaxLED.style.backgroundColor = "lightgray";
+        isAjaxPoolActive = false;
+    };
+    xhttp.ontimeout = function() {
+        console.log("Ajax request timeout");
+        if(isAjaxPoolActive) {
+            setTimeout(AjaxCall,refreshDelayMs);
+        }
+    };
+
+    function AjaxCall() {
+        xhttp.open("GET", "/sensor_value", true);
+        xhttp.send();
+    }
+
+
+
+
+        // Call this to connect to the WebSocket server
+    function wsConnect(url) {
+        
+        // Connect to WebSocket server
+        websocket = new WebSocket(url);
+        websocket.binaryType = "arraybuffer";
+        wsLED.style.backgroundColor = "yellow";
+        
+        // Assign callbacks
+        websocket.onopen = function(evt) { onOpen(evt) };
+        websocket.onclose = function(evt) { onClose(evt) };
+        websocket.onmessage = function(evt) { onMessage(evt) };
+        websocket.onerror = function(evt) { onError(evt) };
+        
+    }
+
+    let wsTimeoutCounter = 0;
+    let wsIntervalId = null;
+    function wsTimeoutCntReset(){
+        wsTimeoutCounter = 0;
+    }
+    function wsAliveTest() {
+        wsTimeoutCounter++;
+        if(wsTimeoutCounter <= 3) {
+            wsLED.style.backgroundColor = "green";
+        }
+        else if(wsTimeoutCounter <= 8)
+        {
+            wsLED.style.backgroundColor = "yellow";
+        }
+        else
+        {
+            wsLED.style.backgroundColor = "red";
+            clearInterval(wsIntervalId);
+            wsTimeoutCntReset();
+            websocket.close();
+        }
+    }
+
+    // Called when a WebSocket connection is established with the server
+    function onOpen(evt) {
+        // Log connection state
+        console.log("Connected");
+        wsLED.style.backgroundColor = "green";
+
+        doSend("Hi Server, I'm Client");
+
+        wsTimeoutCntReset();
+        wsIntervalId = setInterval(wsAliveTest,1000);
+    }
+
+    // Called when the WebSocket connection is closed
+    function onClose(evt) {
+        // Log disconnection state
+        if(evt.wasClean) {
+            console.log("Connection closed");
+            wsLED.style.backgroundColor = "lightgray";
+        }
+        else {
+            console.log("Disconnected with errors");
+            wsLED.style.backgroundColor = "red";
+        }
+        
+        // Try to reconnect after a few seconds
+        setTimeout(function() { wsConnect(ws_url) }, 3000);
+    }
+
+    // Called when a message is received from the server
+    function onMessage(evt) {
+        // Print out our received message
+        if(typeof evt.data === "string"){
+            console.log("Received: " + evt.data);
+            wsReturnString.innerHTML = evt.data;
+        }   
+        else
+        {
+            let binArray = new Uint8Array(evt.data);
+            if(binArray[0] === 0) { //Id of stay alive message
+                //Plot the stayalive counter 
+                wsStayAlive.innerHTML = (new Uint8Array(evt.data))[1].toString();
+                wsTimeoutCntReset(); //Reset the timeout counter
+            }
+        }  
+        
+
+    }
+
+
+    // Called when a WebSocket error occurs
+    function onError(evt) {
+        console.log("ERROR: " + evt.data);
+        
+        wsLED.style.backgroundColor = "red";
+    }
+
+    // Sends a message to the server (and prints it to the console)
+    function doSend(message) {
+        console.log("Sending: " + message);
+        websocket.send(message);
+    }
+
+    // Called whenever the HTML button is pressed
+    function onWSButton() {
+        doSend(wsInputString.value);
+    }
+
+
+    function Init() {
+        ws_url = `ws://${window.location.hostname}:81/`;
+        wsConnect(ws_url);    
+    }
+    window.addEventListener("DOMContentLoaded",Init, false);
+
+</script>
+</html>

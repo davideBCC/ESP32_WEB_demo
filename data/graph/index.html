@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body> 
+    <div style="align-items: center;">
+    <canvas id="idCharCanvas" width="800" height="600"></canvas>
+    </div>
+</body>
+<script src="lib/Chart.min.js"></script>
+<script>
+    //2d context of the canvas where we want to draw the chart
+    let ctx = document.getElementById('idCharCanvas').getContext('2d');
+
+    const time = Array(24).fill(0).map((x,i)=>i);
+    let temperature = Array(24).fill(25).map((x,i) => x+i*0.1);
+    temperature.forEach((x,i)=>temperature[i] = x + Math.random());
+    console.log(time);
+    console.log(temperature);
+    var myChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: time,
+        datasets: [{
+            label: 'temperature',
+            data: temperature,
+            backgroundColor: [
+                'rgba(0, 99, 132, 0.2)',
+            ],
+            borderColor: [
+                'blue',
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        maintainAspectRatio: true,
+        responsive: false,
+        scales: {
+            yAxes: [{
+                ticks: {
+                    beginAtZero: false
+                }
+            }]
+        }
+    }
+});
+    
+
+
+</script>
+</html>
