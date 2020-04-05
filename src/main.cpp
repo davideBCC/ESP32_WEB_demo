@@ -10,6 +10,7 @@
 #include <WebSocketsServer.h>
 
 #include "ConfigManagement.h"
+#include "mic_ws_streaming.h"
 
 ////////////////////////////////////////
 // Global variables
@@ -146,6 +147,8 @@ void setup() {
   u8g2.print(F("WEB Server started."));
   u8g2.sendBuffer();
   u8g2.setCursor(0,(YCursor += ChHeightOff));
+
+  micStreamingInit();
 }
 
 ////////////////////////////////////
