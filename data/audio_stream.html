@@ -17,7 +17,8 @@
     <button onclick="StopSound()">Stop</button>
 
 </body>
-<script type="text/javascript">
+
+<script >
     const buffDuration = 0.5; //buffDuration of the Audio file in ms
     const dataRate = 8000; //Audio at 8KHz
     // const bytePerSample = 4;
@@ -72,7 +73,6 @@
 
             let audioSource = audioContext.createBufferSource();
             audioSource.buffer = aBuff;
-            //audioSource.buffer = audioDoubleBuff[buff_id];
             
             audioSource.connect(biquadFilter);
             audioSource.start(nextStartTime);
@@ -90,8 +90,10 @@
 
         nextStartTime = audioContext.currentTime + 0.8*max_jitter; //set the max_jitter multiplier to get an appropriate margin
         buff_id = 0;
-        PlayBuffer();
-        interCall_id = setInterval(PlayBuffer,buffDuration*1000);
+        //PlayBuffer();
+        //interCall_id = setInterval(PlayBuffer,buffDuration*1000);
+
+
 
         // audioSource = audioContext.createBufferSource();
         // audioSource.loop = false;
@@ -129,6 +131,84 @@
     // s = audioContext.createBufferSource(); 
     // s.buffer = b;
 
+    // Call this to connect to the WebSocket server
+    function wsConnect(url) {
+        
+        // Connect to WebSocket server
+        websocket = new WebSocket(url);
+        websocket.binaryType = "arraybuffer";
+        
+        // Assign callbacks
+        websocket.onopen = function(evt) { onOpen(evt) };
+        websocket.onclose = function(evt) { onClose(evt) };
+        websocket.onmessage = function(evt) { onMessage(evt) };
+        websocket.onerror = function(evt) { onError(evt) };
+        
+    }
+
+    // Called when a WebSocket connection is established with the server
+    function onOpen(evt) {
+        // Log connection state
+        console.log("Connected");
+    }
+
+    // Called when the WebSocket connection is closed
+    function onClose(evt) {
+        // Log disconnection state
+        if(evt.wasClean) {
+            console.log("Connection closed");
+        }
+        else {
+            console.log("Disconnected with errors");
+        }
+        
+        // Try to reconnect after a few seconds
+        setTimeout(function() { wsConnect(ws_url) }, 3000);
+    }
+
+    // Called when a message is received from the server
+    function onMessage(evt) {
+        // Print out our received message
+        if(typeof evt.data === "string"){
+            console.log("Received: " + evt.data);
+            alert(evt.data);
+        }   
+        else
+        {
+            //ToDo: add code here:
+            let buff = new Float32Array(evt.data);
+            let aBuff = audioContext.createBuffer(1,buff.length,dataRate);
+            aBuff.copyToChannel(buff,0); 
+
+            let audioSource = audioContext.createBufferSource();
+            audioSource.buffer = aBuff;
+            
+            audioSource.connect(biquadFilter);
+            audioSource.start(nextStartTime);
+            nextStartTime += aBuff.duration;
+        }  
+        
+
+    }
+
+
+    // Called when a WebSocket error occurs
+    function onError(evt) {
+        console.log("ERROR: " + evt.data);
+    }
+
+    // Sends a message to the server (and prints it to the console)
+    function doSend(message) {
+        console.log("Sending: " + message);
+        websocket.send(message);
+    }
+
+
+    function Init() {
+        ws_url = `ws://${window.location.hostname}:82/`;
+        wsConnect(ws_url);    
+    }
+    window.addEventListener("DOMContentLoaded",Init, false);
 </script>
 
 </html>

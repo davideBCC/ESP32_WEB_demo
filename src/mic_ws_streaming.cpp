@@ -116,12 +116,12 @@ void vTaskAudioWSHandler( void * pvParameters )
             if(buff_id == 0)
             {
                 webSocketAudio.broadcastBIN((uint8_t *)audioBuffer1, BUFF_SIZE * sizeof(audioBuffer1[0]));
-                Serial.printf("Spedito buffer %d, [0]: %f, [10]: %f [20]: %f\n",1,audioBuffer1[0],audioBuffer1[10],audioBuffer1[20]);
+                //Serial.printf("Spedito buffer %d, [0]: %f, [10]: %f [20]: %f\n",1,audioBuffer1[0],audioBuffer1[10],audioBuffer1[20]);
             }
             else
             {
                 webSocketAudio.broadcastBIN((uint8_t *)audioBuffer2, BUFF_SIZE * sizeof(audioBuffer2[0]));
-                Serial.printf("Spedito buffer %d, [0]: %f, [10]: %f [20]: %f\n",2,audioBuffer2[0],audioBuffer2[10],audioBuffer2[20]);
+                //Serial.printf("Spedito buffer %d, [0]: %f, [10]: %f [20]: %f\n",2,audioBuffer2[0],audioBuffer2[10],audioBuffer2[20]);
             }
         }
     }
@@ -131,7 +131,7 @@ void vTaskAudioWSHandler( void * pvParameters )
 void vTaskAudioStream( void * pvParameters )
 {
     TickType_t xLastWakeTime;
-    const TickType_t xFrequency = pdMS_TO_TICKS(1000);
+    const TickType_t xFrequency = pdMS_TO_TICKS(500);
     int buff_id = 0;
 
     // stub

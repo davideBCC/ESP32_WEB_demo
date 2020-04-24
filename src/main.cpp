@@ -39,6 +39,8 @@ void onIndexRequest(AsyncWebServerRequest *request);
 void onButtonClick(AsyncWebServerRequest *request);
 // Callback: receiving any WebSocket message
 void onWebSocketEvent(uint8_t client_num, WStype_t type, uint8_t * payload, size_t length);
+//Print list of SSIDs
+void printSSIDList();
 
 void setup() {
   Serial.begin(115200);
@@ -74,6 +76,7 @@ void setup() {
 
   }
 
+  printSSIDList();
 
   if (MDNS.begin(gsWiFiConfig.smDNSname.c_str()))
   {
@@ -97,23 +100,45 @@ void setup() {
   u8g2.sendBuffer();
   u8g2.setCursor(0,(YCursor += ChHeightOff));
 
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(gsWiFiConfig.sSSID.c_str(), gsWiFiConfig.sPassword.c_str());
-  if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    WiFi.disconnect();
-    delay(500);
-    WiFi.mode(WIFI_STA); //Try to connect a second time
+  
+  // try connecting to the Acces point 
+  if(gsWiFiConfig.sSSID.length() > 0) {
+    WiFi.mode(WIFI_STA);
     WiFi.begin(gsWiFiConfig.sSSID.c_str(), gsWiFiConfig.sPassword.c_str());
-    if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-      Serial.println(F("WiFi connection Failed!"));
-      u8g2.print(F("WiFi Failed!"));
-      u8g2.setCursor(0,(YCursor += ChHeightOff));
-      u8g2.print(F("AP mode"));
-      u8g2.sendBuffer();
-      //require a new WiFi configuration and restart
-      launchConfigViaAP();
+    WiFi.waitForConnectResult();
+    if (WiFi.status() != WL_CONNECTED) { //If connection failed, retry a second time
+      WiFi.disconnect();
+      delay(500);
+      WiFi.mode(WIFI_STA); //Try to connect a second time
+      WiFi.begin(gsWiFiConfig.sSSID.c_str(), gsWiFiConfig.sPassword.c_str());
+      WiFi.waitForConnectResult();
     }
   }
+
+  //If connection to AP failed, start in AP mode
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println(F("WiFi connection Failed!"));
+    u8g2.print(F("WiFi STA Failed!"));
+    u8g2.setCursor(0,(YCursor += ChHeightOff));
+    u8g2.print(F("AP mode"));
+    u8g2.setCursor(0,(YCursor += ChHeightOff));
+    u8g2.sendBuffer();
+    // //require a new WiFi configuration and restart
+    // launchConfigViaAP();
+
+    //Configure AP mode
+    WiFi.mode(WIFI_AP_STA);
+  
+    IPAddress myIP(192,168,4,1);
+    IPAddress subNetIP(255,255,255,0);
+  
+    Serial.println(F("Starting AP mode"));
+    WiFi.softAP("ESP_Config");
+    //WiFi.begin();
+    delay(100); //wait 100ms while access point is started
+    WiFi.config(myIP,myIP,subNetIP);  //Define a fix AP IP
+  }
+  
 
   Serial.print(F("IP Address: "));
   Serial.println(WiFi.localIP());
@@ -193,7 +218,18 @@ void loop() {
   delay(cycleTime);
 }
 
-
+void printSSIDList() {
+  int numberOfNetworks = WiFi.scanNetworks();
+  for(int i =0; i<numberOfNetworks; i++){
+ 
+      Serial.print("Network name: ");
+      Serial.println(WiFi.SSID(i));
+      Serial.print("Signal strength: ");
+      Serial.println(WiFi.RSSI(i));
+      Serial.println("-----------------------");
+ 
+  }
+}
 
 
 //get the new WiFi configuration via http
